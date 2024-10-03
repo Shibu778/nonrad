@@ -1,4 +1,4 @@
-![build badge](https://img.shields.io/github/workflow/status/mturiansky/nonrad/nonrad%20continuous%20integration) [![docs badge](https://readthedocs.org/projects/nonrad/badge/?version=latest)](https://nonrad.readthedocs.io/en/latest/?badge=latest) [![codacy](https://app.codacy.com/project/badge/Grade/97df4e822c2349ff858a756b033c6041)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mturiansky/nonrad&amp;utm_campaign=Badge_Grade) [![codecov](https://codecov.io/gh/mturiansky/nonrad/branch/master/graph/badge.svg?token=N1IXIQK333)](https://codecov.io/gh/mturiansky/nonrad) [![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4274317.svg)](https://doi.org/10.5281/zenodo.4274317)
+![build badge](https://img.shields.io/github/actions/workflow/status/mturiansky/nonrad/ci.yml) [![docs badge](https://readthedocs.org/projects/nonrad/badge/?version=latest)](https://nonrad.readthedocs.io/en/latest/?badge=latest) [![codacy](https://app.codacy.com/project/badge/Grade/97df4e822c2349ff858a756b033c6041)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mturiansky/nonrad&amp;utm_campaign=Badge_Grade) [![codecov](https://codecov.io/gh/mturiansky/nonrad/branch/master/graph/badge.svg?token=N1IXIQK333)](https://codecov.io/gh/mturiansky/nonrad) [![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4274317.svg)](https://doi.org/10.5281/zenodo.4274317)
 
 # NONRAD
 
@@ -86,5 +86,20 @@ and
 	month = oct,
 	year = {2021},
 	pages = {108056},
+}
+```
+If you use the functionality for the Sommerfeld parameter in 2 and 1 dimensions, then please cite
+```
+@article{turiansky_dimensionality_2024,
+    title = {Dimensionality Effects on Trap-Assisted Recombination: The {{Sommerfeld}} Parameter},
+    shorttitle = {Dimensionality Effects on Trap-Assisted Recombination},
+    author = {Turiansky, Mark E and Alkauskas, Audrius and Van De Walle, Chris G},
+    year = {2024},
+    month = may,
+    journal = {J. Phys.: Condens. Matter},
+    volume = {36},
+    number = {19},
+    pages = {195902},
+    doi = {10.1088/1361-648X/ad2588},
 }
 ```

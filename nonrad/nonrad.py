@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) Chris G. Van de Walle
 # Distributed under the terms of the MIT License.
 
@@ -13,7 +12,10 @@ from typing import Union
 
 import numpy as np
 from scipy import constants as const
-from scipy.interpolate import interp1d, PchipInterpolator
+from scipy.interpolate import PchipInterpolator, interp1d
+
+from nonrad.ccd import get_barrier_harmonic
+from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 
 try:
     from numba import njit, vectorize
@@ -35,10 +37,6 @@ except ModuleNotFoundError:
         """Wrap hermval function."""
         return hermval(x, [0.]*n + [1.])
 
-HBAR = const.hbar / const.e                     # in units of eV.s
-EV2J = const.e                                  # 1 eV in Joules
-AMU2KG = const.physical_constants['atomic mass constant'][0]
-ANGS2M = 1e-10                                  # angstrom in meters
 
 factor = ANGS2M**2 * AMU2KG / HBAR / HBAR / EV2J
 Factor2 = const.hbar / ANGS2M**2 / AMU2KG
@@ -56,6 +54,9 @@ LOOKUP_TABLE = np.array([
 # note: -30 to 30 is an arbitrary region. It should be sufficient, but
 # we should probably check this to be safe. 5000 is arbitrary also.
 QQ = np.linspace(-30., 30., 5000)
+
+# grid and weights for Hermite-Gauss quadrature in fast_overlap_NM
+hgx, hgw = np.polynomial.hermite.hermgauss(256)
 
 
 @njit(cache=True)
@@ -126,6 +127,49 @@ def overlap_NM(
 
 
 @njit(cache=True)
+def fast_overlap_NM(
+        dQ: float,
+        w1: float,
+        w2: float,
+        n1: int,
+        n2: int
+) -> float:
+    """Compute the overlap between two displaced harmonic oscillators.
+
+    This function computes the overlap integral between two harmonic
+    oscillators with frequencies w1, w2 that are displaced by dQ for the
+    quantum numbers n1, n2. The integral is computed using Hermite-Gauss
+    quadrature; this method requires an order of magnitude less grid points
+    than the trapezoid method.
+
+    Parameters
+    ----------
+    dQ : float
+        displacement between harmonic oscillators in amu^{1/2} Angstrom
+    w1, w2 : float
+        frequencies of the harmonic oscillators in eV
+    n1, n2 : integer
+        quantum number of the overlap integral to calculate
+
+    Returns
+    -------
+    np.longdouble
+        overlap of the two harmonic oscillator wavefunctions
+    """
+    fw1, fw2 = (factor * w1, factor * w2)
+    x2Q = np.sqrt(2. / (fw1 + fw2))
+
+    def _g(Q):
+        h1 = herm_vec(np.sqrt(fw1)*(Q-dQ), n1) \
+            / np.sqrt(2.**n1 * fact(n1)) * (fw1/np.pi)**(0.25)
+        h2 = herm_vec(np.sqrt(fw2)*Q, n2) \
+            / np.sqrt(2.**n2 * fact(n2)) * (fw2/np.pi)**(0.25)
+        return np.exp(fw1*dQ*(Q-dQ/2.)) * h1 * h2
+
+    return x2Q * np.sum(hgw * _g(x2Q*hgx))
+
+
+@njit(cache=True)
 def analytic_overlap_NM(
         DQ: float,
         w1: float,
@@ -190,8 +234,8 @@ def get_C(
         g: int = 1,
         T: Union[float, np.ndarray] = 300.,
         sigma: Union[str, float] = 'pchip',
-        occ_tol: float = 1e-4,
-        overlap_method: str = 'Integral'
+        occ_tol: float = 1e-5,
+        overlap_method: str = 'HermiteGauss'
 ) -> Union[float, np.ndarray]:
     """Compute the nonradiative capture coefficient.
 
@@ -228,7 +272,7 @@ def get_C(
         the Bose weights
     overlap_method : str
         method for evaluating the overlaps (only the first letter is checked)
-        allowed values => ['Analytic', 'Integral']
+        allowed values => ['Analytic', 'Integral', 'HermiteGauss']
 
     Returns
     -------
@@ -247,10 +291,17 @@ def get_C(
     if tNf > Nf:
         Nf = tNf
 
+    if (Eb := get_barrier_harmonic(dQ, dE, wi, wf)) is not None \
+            and (N_barrier := np.ceil(Eb / wi).astype(int)) > Ni:
+        warnings.warn('Number of initial phonon states included does not '
+                      f'reach the barrier height ({N_barrier} > {Ni}). '
+                      'You may want to test the sensitivity to occ_tol.',
+                      RuntimeWarning, stacklevel=2)
+
     # warn if there are large values, can be ignored if you're confident
     if Ni > 150 or Nf > 150:
         warnings.warn(f'Large value for Ni, Nf encountered: ({Ni}, {Nf})',
-                      RuntimeWarning)
+                      RuntimeWarning, stacklevel=2)
 
     # precompute values of the overlap
     ovl = np.zeros((Ni, Nf), dtype=np.longdouble)
@@ -260,6 +311,8 @@ def get_C(
                 ovl[m, n] = analytic_overlap_NM(dQ, wi, wf, m, n)
             elif overlap_method.lower()[0] == 'i':
                 ovl[m, n] = overlap_NM(dQ, wi, wf, m, n)
+            elif overlap_method.lower()[0] == 'h':
+                ovl[m, n] = fast_overlap_NM(dQ, wi, wf, m, n)
             else:
                 raise ValueError(f'Invalid overlap method: {overlap_method}')
 

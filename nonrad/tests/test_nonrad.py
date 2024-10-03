@@ -7,10 +7,45 @@ import numpy as np
 from numpy.polynomial.hermite import hermval
 from scipy.special import factorial
 
-from nonrad.nonrad import analytic_overlap_NM, fact, get_C, herm, overlap_NM
+from nonrad.nonrad import (
+    analytic_overlap_NM,
+    fact,
+    fast_overlap_NM,
+    get_C,
+    herm,
+    overlap_NM,
+)
 
 
 class OverlapTest(unittest.TestCase):
+    def test_fast_overlap_NM(self):
+        DQ, w1, w2 = (0.00, 0.03, 0.03)
+        for m, n in product(range(10), range(10)):
+            if m == n:
+                self.assertAlmostEqual(fast_overlap_NM(DQ, w1, w2, m, n), 1.)
+            else:
+                self.assertAlmostEqual(fast_overlap_NM(DQ, w1, w2, m, n), 0.)
+        DQ, w1, w2 = (1.00, 0.03, 0.03)
+        for m, n in product(range(10), range(10)):
+            if m == n:
+                self.assertNotAlmostEqual(
+                    fast_overlap_NM(DQ, w1, w2, m, n), 1.
+                )
+            else:
+                self.assertNotAlmostEqual(
+                    fast_overlap_NM(DQ, w1, w2, m, n), 0.
+                )
+        DQ, w1, w2 = (1.00, 0.15, 0.03)
+        for m, n in product(range(10), range(10)):
+            if m == n:
+                self.assertNotAlmostEqual(
+                    fast_overlap_NM(DQ, w1, w2, m, n), 1.
+                )
+            else:
+                self.assertNotAlmostEqual(
+                    fast_overlap_NM(DQ, w1, w2, m, n), 0.
+                )
+
     def test_overlap_NM(self):
         DQ, w1, w2 = (0.00, 0.03, 0.03)
         for m, n in product(range(10), range(10)):
@@ -80,7 +115,7 @@ class GetCTest(unittest.TestCase):
             'g': 1,
             'T': 300,
             'sigma': 'pchip',
-            'occ_tol': 1e-4,
+            'occ_tol': 1e-5,
             'overlap_method': 'Integrate'
         }
 
@@ -108,7 +143,7 @@ class GetCTest(unittest.TestCase):
         self.args['sigma'] = 'cubic'
         self.assertGreater(get_C(**self.args), 0.)
 
-    def test_cubic_failuer(self):
+    def test_cubic_failure(self):
         # should result in a negative C, which doesn't make sense
         self.args = {
             'dQ': 0.3,
@@ -120,7 +155,7 @@ class GetCTest(unittest.TestCase):
             'g': 1,
             'T': 300,
             'sigma': 'cubic',
-            'occ_tol': 1e-4,
+            'occ_tol': 1e-5,
             'overlap_method': 'Integrate'
         }
         self.assertLess(get_C(**self.args), 0.)

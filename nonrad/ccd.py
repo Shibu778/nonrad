@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) Chris G. Van de Walle
 # Distributed under the terms of the MIT License.
 
@@ -8,14 +7,14 @@ This module contains various convenience utilities for working with and
 preparing input for nonrad.
 """
 
-from typing import List, Optional, Tuple, Union
+from typing import Union
 
 import numpy as np
 from pymatgen.core import Structure
 from pymatgen.io.vasp.outputs import Vasprun
 from scipy.optimize import curve_fit
 
-from nonrad.nonrad import AMU2KG, ANGS2M, EV2J, HBAR
+from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 
 
 def get_cc_structures(
@@ -23,7 +22,7 @@ def get_cc_structures(
         excited: Structure,
         displacements: np.ndarray,
         remove_zero: bool = True
-) -> Tuple[List, List]:
+) -> tuple[list, list]:
     """Generate the structures for a CC diagram.
 
     Parameters
@@ -132,9 +131,9 @@ def get_Q_from_struct(
 def get_PES_from_vaspruns(
         ground: Structure,
         excited: Structure,
-        vasprun_paths: List[str],
+        vasprun_paths: list[str],
         tol: float = 0.001
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Extract the potential energy surface (PES) from vasprun.xml files.
 
     This function reads in vasprun.xml files to extract the energy and Q value
@@ -172,9 +171,9 @@ def get_PES_from_vaspruns(
 def get_omega_from_PES(
         Q: np.ndarray,
         energy: np.ndarray,
-        Q0: Optional[float] = None,
+        Q0: Union[float, None] = None,
         ax=None,
-        q: Optional[np.ndarray] = None
+        q: Union[np.ndarray, None] = None
 ) -> float:
     """Calculate the harmonic phonon frequency for the given PES.
 
@@ -212,3 +211,40 @@ def get_omega_from_PES(
         ax.plot(q, f(q, *popt))
 
     return HBAR * popt[0] * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
+
+
+def get_barrier_harmonic(
+        dQ: float,
+        dE: float,
+        wi: float,
+        wf: float
+) -> Union[float, None]:
+    """Calculate the barrier height within the Harmonic approximation.
+
+    Parameters
+    ----------
+    dQ : float
+        displacement between harmonic oscillators in amu^{1/2} Angstrom
+    dE : float
+        energy offset between the two harmonic oscillators
+    wi, wf : float
+        frequencies of the harmonic oscillators in eV
+
+    Returns
+    -------
+    float, None
+        barrier energy in eV or None if no crossing found
+    """
+    swi = wi / HBAR / np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
+    swf = wf / HBAR / np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
+    r = np.roots([
+        0.5 * (swi**2 - swf**2),
+        -swi**2 * dQ,
+        dE + 0.5 * swi**2 * dQ**2,
+    ])
+
+    # no crossing point was found
+    if not np.any(np.isreal(r)):
+        return None
+
+    return np.min(0.5 * swf**2 * r[np.isreal(r)]**2) - dE
