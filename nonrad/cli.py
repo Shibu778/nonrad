@@ -23,7 +23,6 @@ from glob import glob
 @click.group()
 def nonrad():
     """Command Line Interface for nonrad."""
-    pass
 
 
 @click.command()
@@ -38,7 +37,7 @@ def nonrad():
     default=[-0.5, 0.5, 9],
     help="Displacement range and number of displacements.",
 )
-def prep_ccd(ground_path, excited_path, cc_dir, displace=[-0.5, 0.5, 9]):
+def prep_ccd(ground_path, excited_path, cc_dir, displace=None):
     """
     Prepare the input files for CCD calculation. From the ground and excited state calculations,
     the CONTCAR file is read. The displacements are generated and written to the ccd directory. \n
@@ -63,6 +62,8 @@ def prep_ccd(ground_path, excited_path, cc_dir, displace=[-0.5, 0.5, 9]):
 
     # displacements as a percentage, this will generate the displacements
     # -50%, -37.5%, -25%, -12.5%, 0%, 12.5%, 25%, 37.5%, 50%
+    if displace is None:
+        displace = [-0.5, 0.5, 9]
     displacements = np.linspace(displace[0], displace[1], int(displace[2]))
 
     # note: the returned structures won't include the 0% displacement, this is intended
@@ -149,7 +150,7 @@ def pes(cc_dir, ground_files, excited_files, plot=False, plot_name="pes.png"):
 
     # calculate omega
     if plot:
-        fig, ax = plt.subplots(figsize=(5, 5))
+        _, ax = plt.subplots(figsize=(5, 5))
         ax.scatter(Q_ground, E_ground, s=10)
         ax.scatter(Q_excited, E_excited, s=10)
         # by passing in the axis object, it also plots the fitted curve
