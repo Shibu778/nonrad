@@ -94,12 +94,7 @@ def prep_ccd(ground_path, excited_path, cc_dir, displace=[-0.5, 0.5, 9]):
 @click.argument("cc_dir", type=click.Path())
 @click.argument("ground_files", type=click.Path())
 @click.argument("excited_files", type=click.Path())
-@click.option(
-    "--plot",
-    "-p",
-    is_flag=True,
-    help="Plot the potential energy surfaces.",
-)
+@click.option("--plot", "-p", is_flag=True, help="Plot the potential energy surfaces.")
 @click.option(
     "--plot_name",
     "-n",
@@ -131,6 +126,7 @@ def pes(cc_dir, ground_files, excited_files, plot=False, plot_name="pes.png"):
 
     # calculate dQ
     dQ = get_dQ(ground_struct, excited_struct)  # amu^{1/2} Angstrom
+    print(f"dQ = {dQ:.2f} amu^{1/2} Angstrom")
 
     # this prepares a list of all vasprun.xml's from the CCD calculations
     ground_vaspruns = glob(Path(cc_dir, "ground", "*", "vasprun.xml"))
@@ -151,19 +147,21 @@ def pes(cc_dir, ground_files, excited_files, plot=False, plot_name="pes.png"):
     # the energy surfaces are referenced to the minimums, so we need to add dE (defined before) to E_excited
     E_excited = dE + E_excited
 
+    # calculate omega
     if plot:
         fig, ax = plt.subplots(figsize=(5, 5))
         ax.scatter(Q_ground, E_ground, s=10)
         ax.scatter(Q_excited, E_excited, s=10)
-
         # by passing in the axis object, it also plots the fitted curve
         q = np.linspace(-1.0, 3.5, 100)
         ground_omega = get_omega_from_PES(Q_ground, E_ground, ax=ax, q=q)
         excited_omega = get_omega_from_PES(Q_excited, E_excited, ax=ax, q=q)
-
         ax.set_xlabel("$Q$ [amu$^{1/2}$ $\AA$]")
         ax.set_ylabel("$E$ [eV]")
         plt.savefig(plot_name, dpi=300, format=plot_name.split(".")[-1])
+
+    print(f"Ground state omega = {ground_omega:.2f} eV")
+    print(f"Excited state omega = {excited_omega:.2f} eV")
 
     return 0
 
